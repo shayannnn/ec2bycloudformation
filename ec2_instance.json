@@ -1,0 +1,103 @@
+{
+    "Description": "EC2 instance by AWS CloudFormation",
+    "Mappings": {
+        "AmiMap": {
+          "ServerType01": {
+            "id": " ami-001e484a60bb07f8d "
+          }
+        },
+        "KeyPair": {
+          "Key01": {
+            "key": "mykey"
+          }
+        }
+      },
+    "Resources": {
+      "SecurityGroupTraffic": {
+        "Type": "AWS::EC2::SecurityGroup",
+        "Properties": {
+          "GroupName": "mysec",
+          "SecurityGroupIngress": [
+            {
+              "IpProtocol": "tcp",
+              "FromPort": 22,
+              "ToPort": 22,
+              "CidrIp": "0.0.0.0/0"
+            },
+            {
+              "IpProtocol": "tcp",
+              "FromPort": "80",
+              "ToPort": "80",
+              "CidrIp": "0.0.0.0/0"
+            }
+          ],
+          "GroupDescription": "Security Group for server",
+          "VpcId": "vpc-80c2d6e8"
+        }
+      },
+      "EC2InstanceDemoSvr": {
+        "Type": "AWS::EC2::Instance",
+        "Properties": {
+          "AvailabilityZone": "ap-south-1a",
+          "BlockDeviceMappings": [
+            {
+              "DeviceName": "[For Ubuntu Server, default value is /dev/sda1]",
+              "Ebs": {
+                "DeleteOnTermination": "true",
+                "VolumeSize": "8",
+                "VolumeType": "gp2"
+              }
+            }
+          ],
+          "ImageId": {
+            "Fn::FindInMap": [
+              "AmiMap",
+              "ServerType01",
+              "id"
+            ]
+          },
+          "InstanceType": "t2.micro",
+          "KeyName": {
+            "Fn::FindInMap": [
+              "KeyPair",
+              "Key01",
+              "key"
+            ]
+          },
+          "UserData": {
+            "Fn::Base64": {
+              "Fn::Join": [
+                "",
+                [
+                  "#!/bin/bash",
+                  "sudo yum -y update",
+                  "sudo yum -y install ruby",
+                  "sudo yum -y install wget",
+                  "cd /home/ec2-user",
+                  "wget https://aws-codedeploy-ap-south-1.s3.ap-south-1.amazonaws.com/latest/install",
+                  "sudo chmod +x ./install",
+                  "sudo ./install auto",
+                  "sudo yum install -y python-pip",
+                  "sudo pip install awscli"
+                ]
+              ]
+            }
+          },
+          "NetworkInterfaces": [
+            {
+              "Description": "Primary network interface",
+              "DeviceIndex": "0",
+              "SubnetId": "subnet-ce086a82",
+              "AssociatePublicIpAddress": "true",
+              "PrivateIpAddress": "172.31.1.5",
+              "GroupSet": [
+                {
+                  "Ref": "SecurityGroupTraffic"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
